@@ -114,6 +114,21 @@ function init() {
     // シェーダプログラムの作成
     const textureShaderProgram = createShaderProgram(textureVertexShaderSource, textureFragmentShaderSource);
 
+    const vertexBuffer2 = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer2);
+    const vertices2 = [
+        -1, -1,
+        1, -1,
+        -1,  1,
+        1,  1,
+    ];
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices2), gl.STATIC_DRAW);
+
+    // 頂点属性の設定
+    const positionAttribLocation2 = gl.getAttribLocation(shaderProgram, 'aVertexPosition');
+    gl.enableVertexAttribArray(positionAttribLocation2);
+    gl.vertexAttribPointer(positionAttribLocation2, 2, gl.FLOAT, false, 0, 0);
+
     // テクスチャ座標の設定
     const textureCoordBuffer = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, textureCoordBuffer);
@@ -141,6 +156,8 @@ function init() {
 
     // メインキャンバスにテクスチャを描画
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    gl.clearColor(0.0, 0.0, 0.0, 1.0);
+    gl.clear(gl.COLOR_BUFFER_BIT);
     gl.viewport(0, 0, canvas.width, canvas.height);
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
 }
