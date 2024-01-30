@@ -50,10 +50,10 @@ function offscreenRendering(gl) {
     const vertexBuffer = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
     const vertices = [
-        -0.5, -0.5,
-        0.5, -0.5,
-        -0.5,  0.5,
-        0.5,  0.5,
+        -1, -1,
+        1, -1,
+        -1,  1,
+        1,  1,
     ];
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
 
@@ -107,6 +107,7 @@ function renderOffscreenTexture(gl, canvas, offscreenTexture) {
     'uniform sampler2D uSampler;' +
     'void main() {' +
     '    gl_FragColor = texture2D(uSampler, vTextureCoord);' +
+    '    gl_FragColor.a = 0.2;' +
     '}';
 
     // シェーダプログラムの作成
@@ -115,10 +116,10 @@ function renderOffscreenTexture(gl, canvas, offscreenTexture) {
     const vertexBuffer = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
     const vertices = [
-        -1, -1,
-        1, -1,
-        -1,  1,
-        1,  1,
+        -0.5, -0.5,
+        0.5, -0.5,
+        -0.5,  0.5,
+        0.5,  0.5,
     ];
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
 
@@ -157,6 +158,8 @@ function renderOffscreenTexture(gl, canvas, offscreenTexture) {
     gl.clearColor(0.0, 0.0, 0.0, 1.0);
     gl.clear(gl.COLOR_BUFFER_BIT);
     gl.viewport(0, 0, canvas.width, canvas.height);
+    gl.enable(gl.BLEND);
+    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
 }
 
