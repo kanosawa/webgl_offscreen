@@ -26,8 +26,42 @@ function createShaderProgram(gl, vertexShaderSource, fragmentShaderSource) {
     return shaderProgram;
 }
 
+class Offscreen {
+
+    getFrameBuffer(viewport) {
+        if (this.width === undefined || this.height === undefined || viewport[2] != this.width || viewport[3] != this.height) {
+            this.width = viewport[2];
+            this.height = viewport[3];
+            this.gl.bindTexture(this.gl.TEXTURE_2D, this.texture);
+            this.gl.texImage2D(this.gl.TEXTURE_2D, 0, this.gl.RGBA, this.width, this.height, 0, this.gl.RGBA, this.gl.UNSIGNED_BYTE, null);
+            this.gl.bindTexture(this.gl.TEXTURE_2D, null);
+        }
+        this.gl.bindFramebuffer(this.gl.FRAMEBUFFER, this.#framebuffer);
+        this.gl.framebufferTexture2D(this.gl.FRAMEBUFFER, this.gl.COLOR_ATTACHMENT0, this.gl.TEXTURE_2D, this.texture, 0);
+        this.gl.bindFramebuffer(this.gl.FRAMEBUFFER, null);
+        return this.#framebuffer;
+    }
+
+    constructor(gl) {
+        this.gl = gl;
+        this.texture = gl.createTexture();
+        gl.bindTexture(gl.TEXTURE_2D, this.texture);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+        this.#framebuffer = gl.createFramebuffer();
+    }
+
+    gl;
+    #framebuffer;
+    texture;
+    width;
+    height;
+};
+
 // オフスクリーンレンダリング
-function offscreenRendering(gl) {
+function offscreenRendering(gl, offscreen) {
 
     // シンプルな頂点シェーダ
     const vertexShaderSource = 
@@ -62,20 +96,8 @@ function offscreenRendering(gl) {
     gl.enableVertexAttribArray(positionAttribLocation);
     gl.vertexAttribPointer(positionAttribLocation, 2, gl.FLOAT, false, 0, 0);
 
-    // オフスクリーンレンダリング用のフレームバッファとテクスチャの作成
-    const offscreenFramebuffer = gl.createFramebuffer();
-    gl.bindFramebuffer(gl.FRAMEBUFFER, offscreenFramebuffer);
-
-    const offscreenTexture = gl.createTexture();
-    gl.bindTexture(gl.TEXTURE_2D, offscreenTexture);
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 640, 480, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
-
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-
-    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, offscreenTexture, 0);
+    const framebuffer = offscreen.getFrameBuffer([0, 0, 640, 480]);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
 
     // オフスクリーンレンダリング
     gl.viewport(0, 0, 640, 480);
@@ -84,7 +106,7 @@ function offscreenRendering(gl) {
     gl.useProgram(shaderProgram);
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
 
-    return offscreenTexture;
+    return offscreen.texture;
 }
 
 // オフスクリーンテクスチャの描画
@@ -174,6 +196,7 @@ function init() {
         return;
     }
 
-    const offscreenTexture = offscreenRendering(gl);
+    const offscreen = new Offscreen(gl);
+    const offscreenTexture = offscreenRendering(gl, offscreen);
     renderOffscreenTexture(gl, canvas, offscreenTexture);
 }
