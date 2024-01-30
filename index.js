@@ -1,58 +1,50 @@
-function init() {
-
-    // WebGL2 コンテキストの取得
-    const canvas = document.getElementById("glcanvas");
-    const gl = canvas.getContext("webgl2");
-
-    if (!gl) {
-        alert("WebGL2 を初期化できません。ブラウザがサポートしていない可能性があります。");
-        return;
+// シェーダのコンパイル
+function compileShader(gl, type, source) {
+    const shader = gl.createShader(type);
+    gl.shaderSource(shader, source);
+    gl.compileShader(shader);
+    if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+        alert("シェーダのコンパイルに失敗: " + gl.getShaderInfoLog(shader));
+        gl.deleteShader(shader);
+        return null;
     }
+    return shader;
+}
 
-    // シェーダのコンパイル
-    function compileShader(type, source) {
-        const shader = gl.createShader(type);
-        gl.shaderSource(shader, source);
-        gl.compileShader(shader);
-        if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
-            alert("シェーダのコンパイルに失敗: " + gl.getShaderInfoLog(shader));
-            gl.deleteShader(shader);
-            return null;
-        }
-        return shader;
+// シェーダプログラムの作成
+function createShaderProgram(gl, vertexShaderSource, fragmentShaderSource) {
+    const vertexShader = compileShader(gl, gl.VERTEX_SHADER, vertexShaderSource);
+    const fragmentShader = compileShader(gl, gl.FRAGMENT_SHADER, fragmentShaderSource);
+    const shaderProgram = gl.createProgram();
+    gl.attachShader(shaderProgram, vertexShader);
+    gl.attachShader(shaderProgram, fragmentShader);
+    gl.linkProgram(shaderProgram);
+    if (!gl.getProgramParameter(shaderProgram, gl.LINK_STATUS)) {
+        alert("シェーダプログラムのリンクに失敗: " + gl.getProgramInfoLog(shaderProgram));
+        return null;
     }
+    return shaderProgram;
+}
 
-    // シェーダプログラムの作成
-    function createShaderProgram(vertexShaderSource, fragmentShaderSource) {
-        const vertexShader = compileShader(gl.VERTEX_SHADER, vertexShaderSource);
-        const fragmentShader = compileShader(gl.FRAGMENT_SHADER, fragmentShaderSource);
-        const shaderProgram = gl.createProgram();
-        gl.attachShader(shaderProgram, vertexShader);
-        gl.attachShader(shaderProgram, fragmentShader);
-        gl.linkProgram(shaderProgram);
-        if (!gl.getProgramParameter(shaderProgram, gl.LINK_STATUS)) {
-            alert("シェーダプログラムのリンクに失敗: " + gl.getProgramInfoLog(shaderProgram));
-            return null;
-        }
-        return shaderProgram;
-    }
+// オフスクリーンレンダリング
+function offscreenRendering(gl) {
 
     // シンプルな頂点シェーダ
     const vertexShaderSource = 
-        'attribute vec4 aVertexPosition;' +
-        'void main() {' +
-        '    gl_Position = aVertexPosition;' +
-        '}';
+    'attribute vec4 aVertexPosition;' +
+    'void main() {' +
+    '    gl_Position = aVertexPosition;' +
+    '}';
 
     // シンプルなフラグメントシェーダ
     const fragmentShaderSource =
-        'precision mediump float;' +
-        'void main() {' +
-        '    gl_FragColor = vec4(1.0, 0.0, 0.0, 1.0);' +
-        '}';
+    'precision mediump float;' +
+    'void main() {' +
+    '    gl_FragColor = vec4(1.0, 0.0, 0.0, 1.0);' +
+    '}';
 
     // シェーダプログラムの作成
-    const shaderProgram = createShaderProgram(vertexShaderSource, fragmentShaderSource);
+    const shaderProgram = createShaderProgram(gl, vertexShaderSource, fragmentShaderSource);
 
     // 頂点情報の設定
     const vertexBuffer = gl.createBuffer();
@@ -92,42 +84,48 @@ function init() {
     gl.useProgram(shaderProgram);
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
 
+    return offscreenTexture;
+}
+
+// オフスクリーンテクスチャの描画
+function renderOffscreenTexture(gl, canvas, offscreenTexture) {
+
     // テクスチャ用の頂点シェーダ
-    const textureVertexShaderSource =
-        'attribute vec4 aVertexPosition;' +
-        'attribute vec2 aTextureCoord;' +
-        'varying highp vec2 vTextureCoord;' +
-        'void main() {' +
-        '    gl_Position = aVertexPosition;' +
-        '    vTextureCoord = aTextureCoord;' +
-        '}';
+    const vertexShaderSource =
+    'attribute vec4 aVertexPosition;' +
+    'attribute vec2 aTextureCoord;' +
+    'varying highp vec2 vTextureCoord;' +
+    'void main() {' +
+    '    gl_Position = aVertexPosition;' +
+    '    vTextureCoord = aTextureCoord;' +
+    '}';
 
     // テクスチャ用のフラグメントシェーダ
-    const textureFragmentShaderSource =
-        'precision mediump float;' +
-        'varying highp vec2 vTextureCoord;' +
-        'uniform sampler2D uSampler;' +
-        'void main() {' +
-        '    gl_FragColor = texture2D(uSampler, vTextureCoord);' +
-        '}';
+    const fragmentShaderSource =
+    'precision mediump float;' +
+    'varying highp vec2 vTextureCoord;' +
+    'uniform sampler2D uSampler;' +
+    'void main() {' +
+    '    gl_FragColor = texture2D(uSampler, vTextureCoord);' +
+    '}';
 
     // シェーダプログラムの作成
-    const textureShaderProgram = createShaderProgram(textureVertexShaderSource, textureFragmentShaderSource);
+    const shaderProgram = createShaderProgram(gl, vertexShaderSource, fragmentShaderSource);
 
-    const vertexBuffer2 = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer2);
-    const vertices2 = [
+    const vertexBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
+    const vertices = [
         -1, -1,
         1, -1,
         -1,  1,
         1,  1,
     ];
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices2), gl.STATIC_DRAW);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
 
     // 頂点属性の設定
-    const positionAttribLocation2 = gl.getAttribLocation(shaderProgram, 'aVertexPosition');
-    gl.enableVertexAttribArray(positionAttribLocation2);
-    gl.vertexAttribPointer(positionAttribLocation2, 2, gl.FLOAT, false, 0, 0);
+    const positionAttribLocation = gl.getAttribLocation(shaderProgram, 'aVertexPosition');
+    gl.enableVertexAttribArray(positionAttribLocation);
+    gl.vertexAttribPointer(positionAttribLocation, 2, gl.FLOAT, false, 0, 0);
 
     // テクスチャ座標の設定
     const textureCoordBuffer = gl.createBuffer();
@@ -141,7 +139,7 @@ function init() {
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(textureCoordinates), gl.STATIC_DRAW);
 
     // テクスチャ座標属性の設定
-    const textureCoordAttribLocation = gl.getAttribLocation(textureShaderProgram, 'aTextureCoord');
+    const textureCoordAttribLocation = gl.getAttribLocation(shaderProgram, 'aTextureCoord');
     gl.enableVertexAttribArray(textureCoordAttribLocation);
     gl.vertexAttribPointer(textureCoordAttribLocation, 2, gl.FLOAT, false, 0, 0);
 
@@ -149,10 +147,10 @@ function init() {
     gl.bindTexture(gl.TEXTURE_2D, offscreenTexture);
 
     // シェーダプログラムの使用
-    gl.useProgram(textureShaderProgram);
+    gl.useProgram(shaderProgram);
 
     // テクスチャサンプラーの設定
-    gl.uniform1i(gl.getUniformLocation(textureShaderProgram, 'uSampler'), 0);
+    gl.uniform1i(gl.getUniformLocation(shaderProgram, 'uSampler'), 0);
 
     // メインキャンバスにテクスチャを描画
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
@@ -160,4 +158,19 @@ function init() {
     gl.clear(gl.COLOR_BUFFER_BIT);
     gl.viewport(0, 0, canvas.width, canvas.height);
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+}
+
+function init() {
+
+    // WebGL2 コンテキストの取得
+    const canvas = document.getElementById("glcanvas");
+    const gl = canvas.getContext("webgl2");
+
+    if (!gl) {
+        alert("WebGL2 を初期化できません。ブラウザがサポートしていない可能性があります。");
+        return;
+    }
+
+    const offscreenTexture = offscreenRendering(gl);
+    renderOffscreenTexture(gl, canvas, offscreenTexture);
 }
