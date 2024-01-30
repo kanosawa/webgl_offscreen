@@ -107,7 +107,7 @@ function renderOffscreenTexture(gl, canvas, offscreenTexture) {
     'uniform sampler2D uSampler;' +
     'void main() {' +
     '    gl_FragColor = texture2D(uSampler, vTextureCoord);' +
-    '    gl_FragColor.a = 0.2;' +
+    '    gl_FragColor.a = 0.3;' +
     '}';
 
     // シェーダプログラムの作成
@@ -155,7 +155,7 @@ function renderOffscreenTexture(gl, canvas, offscreenTexture) {
 
     // メインキャンバスにテクスチャを描画
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-    gl.clearColor(0.0, 0.0, 0.0, 1.0);
+    gl.clearColor(0.0, 0.0, 0.0, 0.0);
     gl.clear(gl.COLOR_BUFFER_BIT);
     gl.viewport(0, 0, canvas.width, canvas.height);
     gl.enable(gl.BLEND);
